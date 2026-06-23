@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graphunc — Function Grapher</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas id="graph"></canvas>
+    <div id="readout" hidden></div>
+
+    <div id="panel">
+      <div id="functions"></div>
+      <button id="add-function" type="button">+ Add function</button>
+      <p class="hint">
+        Drag to pan · scroll to zoom · e.g. <code>sin(x) * x</code>,
+        <code>x^2</code>, <code>1/x</code>
+      </p>
+    </div>
+
+    <script src="parser.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
