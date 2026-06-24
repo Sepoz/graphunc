@@ -105,7 +105,111 @@ body {
   color: #e0566c;
 }
 
-#add-function {
+/* A named group of functions, rendered as a <details> disclosure. */
+.group {
+  border: 1px solid #2a3140;
+  border-radius: 8px;
+  background: rgba(15, 19, 26, 0.5);
+}
+
+.group summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  cursor: pointer;
+  list-style: none; /* hide the default disclosure triangle */
+  user-select: none;
+}
+
+.group summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Custom disclosure caret that rotates when the group is open. */
+.group summary::before {
+  content: '▸';
+  color: #6b7688;
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+
+.group[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.group-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #cdd6e4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-rename {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px solid #4dd0e1;
+  background: #0f131a;
+  color: #e6ebf4;
+  font-size: 13px;
+}
+
+.group summary button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+  color: #6b7688;
+}
+
+.group-visibility {
+  font-size: 13px;
+}
+
+.group-visibility.is-off {
+  opacity: 0.35;
+}
+
+.group-add {
+  font-size: 16px;
+}
+
+.group-add:hover {
+  color: #4dd0e1;
+}
+
+.group-remove {
+  font-size: 16px;
+}
+
+.group-remove:hover {
+  color: #e0566c;
+}
+
+/* Dim the whole header while the group's curves are hidden. */
+.group.group-hidden .group-name {
+  color: #6b7688;
+}
+
+.group .rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 8px 10px;
+}
+
+.group .rows:empty {
+  padding: 0;
+}
+
+#add-group {
   width: 100%;
   padding: 7px;
   border-radius: 6px;
@@ -116,7 +220,7 @@ body {
   font-size: 13px;
 }
 
-#add-function:hover {
+#add-group:hover {
   border-color: #4dd0e1;
   color: #4dd0e1;
 }

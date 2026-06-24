@@ -29,8 +29,16 @@ const view = {
   pixelsPerUnit: 60,
 };
 
-// Active plots: { expr, color, fn, error }. `fn` is null when `expr` is invalid.
-const plots = [];
+// Functions are organized into named groups. A group owns its plots and can be
+// hidden as a unit. Shape:
+//   group: { name, collapsed, visible, plots, el, rowsEl }
+//   plot:  { expr, color, fn, error }  // `fn` is null when `expr` is invalid
+const groups = [];
+
+// Every visible plot across all visible groups, in display order. The render
+// and readout loops iterate this so they stay oblivious to grouping.
+const visiblePlots = () =>
+  groups.filter((g) => g.visible).flatMap((g) => g.plots);
 
 let width = 0;
 let height = 0;
@@ -184,7 +192,7 @@ function render() {
   drawAxes();
   drawLabels(step);
 
-  for (const plot of plots) {
+  for (const plot of visiblePlots()) {
     if (plot.fn) plotFunction(plot.fn, plot.color);
   }
 
@@ -202,7 +210,7 @@ function drawCursorMarkers() {
   ctx.lineTo(Math.round(cursor.x) + 0.5, height);
   ctx.stroke();
 
-  for (const plot of plots) {
+  for (const plot of visiblePlots()) {
     if (!plot.fn) continue;
     const y = plot.fn(worldX);
     if (!Number.isFinite(y)) continue;
@@ -324,7 +332,7 @@ function updateReadout(screenX, screenY) {
   coordLine.textContent = `x: ${formatValue(worldX, decimals)}   y: ${formatValue(worldY, decimals)}`;
   readoutEl.append(coordLine);
 
-  for (const plot of plots) {
+  for (const plot of visiblePlots()) {
     if (!plot.fn) continue;
     const line = document.createElement('div');
     line.style.color = plot.color;
@@ -365,7 +373,15 @@ canvas.addEventListener('mouseleave', () => {
 // --- Function panel UI -----------------------------------------------------
 
 const functionsEl = document.getElementById('functions');
-const addButton = document.getElementById('add-function');
+const addGroupButton = document.getElementById('add-group');
+
+// Plot colors cycle globally across all groups so curves stay distinguishable
+// regardless of which group they live in. `groupCounter` only feeds default
+// names ("Group 1", "Group 2", …).
+let colorIndex = 0;
+let groupCounter = 0;
+
+const nextColor = () => PLOT_COLORS[colorIndex++ % PLOT_COLORS.length];
 
 function recompile(plot, input) {
   const { fn, error } = compileExpression(plot.expr);
@@ -376,10 +392,128 @@ function recompile(plot, input) {
   render();
 }
 
-function addPlot(initialExpr) {
-  const color = PLOT_COLORS[plots.length % PLOT_COLORS.length];
+/** Swap a group's name label for an inline text input until commit/cancel. */
+function startRename(group, nameEl) {
+  const input = document.createElement('input');
+  input.className = 'group-rename';
+  input.value = group.name;
+  input.spellcheck = false;
+
+  const commit = () => {
+    group.name = input.value.trim() || group.name;
+    nameEl.textContent = group.name;
+    input.replaceWith(nameEl);
+    save();
+  };
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit();
+    } else if (event.key === 'Escape') {
+      input.replaceWith(nameEl);
+    }
+  });
+  input.addEventListener('blur', commit);
+  // A click inside <summary> would otherwise toggle the disclosure.
+  input.addEventListener('click', (event) => event.preventDefault());
+
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function createGroup({ name, collapsed = false, visible = true } = {}) {
+  groupCounter += 1;
+  const group = {
+    name: name ?? `Group ${groupCounter}`,
+    collapsed,
+    visible,
+    plots: [],
+    el: null,
+    rowsEl: null,
+  };
+  groups.push(group);
+
+  const details = document.createElement('details');
+  details.className = 'group';
+  details.open = !collapsed;
+  details.addEventListener('toggle', () => {
+    group.collapsed = !details.open;
+    save();
+  });
+
+  const summary = document.createElement('summary');
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'group-name';
+  nameEl.textContent = group.name;
+  nameEl.title = 'Double-click to rename';
+  nameEl.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    startRename(group, nameEl);
+  });
+
+  const visBtn = document.createElement('button');
+  visBtn.type = 'button';
+  visBtn.className = 'group-visibility';
+  visBtn.textContent = '👁';
+  visBtn.title = 'Toggle visibility';
+  const syncVisibility = () => {
+    visBtn.classList.toggle('is-off', !group.visible);
+    details.classList.toggle('group-hidden', !group.visible);
+  };
+  visBtn.addEventListener('click', (event) => {
+    event.preventDefault(); // don't toggle the <details>
+    group.visible = !group.visible;
+    syncVisibility();
+    render();
+    save();
+  });
+  syncVisibility();
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'group-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Add function to this group';
+  addBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    details.open = true;
+    addPlot(group, '');
+    save();
+  });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'group-remove';
+  removeBtn.textContent = '×';
+  removeBtn.title = 'Remove group';
+  removeBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    groups.splice(groups.indexOf(group), 1);
+    details.remove();
+    render();
+    save();
+  });
+
+  summary.append(nameEl, visBtn, addBtn, removeBtn);
+
+  const rows = document.createElement('div');
+  rows.className = 'rows';
+
+  details.append(summary, rows);
+  functionsEl.append(details);
+
+  group.el = details;
+  group.rowsEl = rows;
+  return group;
+}
+
+function addPlot(group, initialExpr, presetColor) {
+  const color = presetColor ?? nextColor();
   const plot = { expr: initialExpr ?? '', color, fn: null, error: null };
-  plots.push(plot);
+  group.plots.push(plot);
 
   const row = document.createElement('div');
   row.className = 'function-row';
@@ -396,6 +530,7 @@ function addPlot(initialExpr) {
   input.addEventListener('input', () => {
     plot.expr = input.value.trim();
     recompile(plot, input);
+    save();
   });
 
   const removeButton = document.createElement('button');
@@ -403,20 +538,75 @@ function addPlot(initialExpr) {
   removeButton.type = 'button';
   removeButton.textContent = '×';
   removeButton.addEventListener('click', () => {
-    plots.splice(plots.indexOf(plot), 1);
+    group.plots.splice(group.plots.indexOf(plot), 1);
     row.remove();
     render();
+    save();
   });
 
   row.append(swatch, input, removeButton);
-  functionsEl.append(row);
+  group.rowsEl.append(row);
 
   if (plot.expr) recompile(plot, input);
 }
 
-addButton.addEventListener('click', () => addPlot(''));
+addGroupButton.addEventListener('click', () => {
+  const group = createGroup();
+  addPlot(group, '');
+  save();
+});
+
+// --- Persistence -----------------------------------------------------------
+
+const STORAGE_KEY = 'graphunc.groups';
+
+/** Minimal serializable shape; functions are recompiled from `expr` on load. */
+function serialize() {
+  return groups.map((g) => ({
+    name: g.name,
+    collapsed: g.collapsed,
+    visible: g.visible,
+    plots: g.plots.map((p) => ({ expr: p.expr, color: p.color })),
+  }));
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+  } catch {
+    // Storage unavailable (private mode, quota) — persistence is best-effort.
+  }
+}
+
+function loadState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return Array.isArray(parsed) && parsed.length ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 // --- Boot ------------------------------------------------------------------
 
 resize();
-addPlot('sin(x)');
+
+const restored = loadState();
+if (restored) {
+  for (const g of restored) {
+    const group = createGroup({
+      name: g.name,
+      collapsed: Boolean(g.collapsed),
+      visible: g.visible !== false,
+    });
+    for (const p of g.plots ?? []) {
+      addPlot(group, p.expr, p.color);
+    }
+  }
+  // Resume color cycling past the restored curves so new ones stay distinct.
+  colorIndex = groups.reduce((n, g) => n + g.plots.length, 0);
+} else {
+  addPlot(createGroup({ name: 'Group 1' }), 'sin(x)');
+}
+
+render();
