@@ -2,7 +2,9 @@
 
 A full-screen, dependency-free math function grapher built with plain HTML, CSS and JavaScript.
 
-![Graphunc plotting sin(x) on a full-screen cartesian grid](docs/screenshot.png)
+<p align="center">
+  <img src="favicon.svg" width="120" alt="Graphunc favicon" />
+</p>
 
 ## Setup
 
@@ -17,25 +19,42 @@ python3 -m http.server
 
 - Full-screen cartesian grid with adaptive tick spacing (1/2/5 × 10ⁿ)
 - Pan (drag) and zoom (scroll, anchored under the cursor)
-- Plot multiple functions at once, each with its own color
+- Plot multiple functions at once, organized into named, collapsible groups
+- **Parameters** — workspace-global named constants with sliders; curves
+  re-render live as you drag, no recompile needed
 - Live cursor readout: world coordinates plus each function's value, with a marker dot on every curve
+- **Trace mode** — click a curve to select it, then walk along it with the
+  arrow keys (←/→ step, ↑/↓ jump to local extrema); Esc exits
+- **Roots & intersections** — toggle on-demand annotation; roots are marked
+  on the axis, intersections as split rings
+- **Share** — "Copy link" encodes the full view, parameters and functions into
+  the URL hash; "PNG" exports the canvas at full Retina resolution
+- "Reset" and "Fit" view buttons
 - Safe expression parser — recursive descent, **no `eval`** — so user input never executes arbitrary code
-- HiDPI/Retina-crisp rendering
+- HiDPI/Retina-crisp rendering, with render coalescing via `requestAnimationFrame`
+- State persists to `localStorage` between sessions
 
 ## Expression syntax
 
 - Operators: `+ - * / ^` (`^` is right-associative) and unary minus
-- Variable: `x` · Constants: `pi`, `e`, `tau`
-- Functions: `sin cos tan asin acos atan sinh cosh tanh sqrt cbrt abs exp ln log log2 floor ceil round sign`
-- No implicit multiplication — write `3*x`, not `3x`
+- Implicit multiplication (conservative): `3x`, `2sin(x)`, `2(x+1)`,
+  `(x+1)(x-2)`, `2pi`. Rejected as ambiguous: `x x`, `2 3`, `x(x+1)`.
+  Note: `1/2x` parses left-to-right as `(1/2)*x`; write `1/(2x)` otherwise.
+- Comparisons: `< <= > >= == !=` (return `1`/`0`)
+- Ternary: `cond ? a : b` (enables piecewise functions)
+- Variable: `x` · Parameters: any name you add via the Parameters panel
+- Constants: `pi`, `e`, `tau`
+- Functions (1-arg): `sin cos tan asin acos atan sinh cosh tanh sqrt cbrt abs exp ln log log2 floor ceil round sign`
+- Functions (multi-arg): `atan2(y,x) mod(a,b) min(a,b) max(a,b) hypot(x,y) nthroot(x,n) log(base,x)`
 
-Examples: `sin(x) * x`, `x^2`, `1/x`, `sqrt(x)`
+Examples: `sin(x) * x`, `x^2`, `1/x`, `a*sin(b*x)`,
+`x < 0 ? -x : x`, `log(2, 8)`
 
 ## Project structure
 
 ```
-index.html    # Markup: canvas, readout, function panel
+index.html    # Markup: canvas, readout, panel (parameters, functions, toolbar)
 styles.css    # Layout and panel styling
 parser.js     # Safe expression compiler (compileExpression)
-main.js       # Coordinate transforms, rendering, pan/zoom, UI
+main.js       # Coordinate transforms, rendering, pan/zoom, params, trace, UI
 ```
