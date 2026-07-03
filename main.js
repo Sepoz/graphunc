@@ -31,29 +31,9 @@ const view = {
   pixelsPerUnit: 60,
 };
 
-// Functions are organized into named groups. A group owns its plots and can be
-// hidden as a unit. Shape:
-//   group: { name, collapsed, visible, plots, el, rowsEl }
-//   plot:  { expr, color, fn, error }  // `fn` is null when `expr` is invalid
-const groups = [];
-
-// Workspace-global parameters, each surfaced as a named slider. Parameters
-// feed a shared live `scope` object: compiled closures read `scope[name]` at
-// call time, so dragging a slider only needs a re-render (never a recompile).
-// Adding / renaming / removing a parameter requires recompiling every plot.
-//   param: { name, value, min, max, step, el, ...inputs }
-const params = [];
-const scope = {};
-
-function syncScope() {
-  for (const key of Object.keys(scope)) delete scope[key];
-  for (const p of params) scope[p.name] = p.value;
-}
-
-// Every visible plot across all visible groups, in display order. The render
-// and readout loops iterate this so they stay oblivious to grouping.
-const visiblePlots = () =>
-  groups.filter((g) => g.visible).flatMap((g) => g.plots);
+// Plots live in a flat list. Each is independent and always visible.
+//   plot: { expr, color, fn, error }  // `fn` is null when `expr` is invalid
+const plots = [];
 
 let width = 0;
 let height = 0;
@@ -210,15 +190,12 @@ function doRender() {
   drawAxes();
   drawLabels(step);
 
-  for (const plot of visiblePlots()) {
+  for (const plot of plots) {
     if (plot.fn) plotFunction(plot.fn, plot.color);
   }
 
-  computeAnnotations();
-  drawAnnotations();
-
-  // Drop a trace whose curve was hidden or removed.
-  if (trace && (!trace.plot.fn || !visiblePlots().includes(trace.plot))) {
+  // Drop a trace whose curve was removed.
+  if (trace && (!trace.plot.fn || !plots.includes(trace.plot))) {
     trace = null;
     readoutEl.hidden = true;
   }
@@ -249,7 +226,7 @@ function drawCursorMarkers() {
   ctx.lineTo(Math.round(cursor.x) + 0.5, height);
   ctx.stroke();
 
-  for (const plot of visiblePlots()) {
+  for (const plot of plots) {
     if (!plot.fn) continue;
     const y = plot.fn(worldX);
     if (!Number.isFinite(y)) continue;
@@ -260,122 +237,6 @@ function drawCursorMarkers() {
     ctx.fill();
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = COLORS.gradientBottom;
-    ctx.stroke();
-  }
-}
-
-// --- Annotations: roots & intersections -----------------------------------
-
-// Toggled by toolbar buttons; recomputed (cached) on view/plot changes.
-let showRoots = false;
-let showIntersections = false;
-let annotations = { roots: [], intersections: [] };
-let annotationKey = '';
-
-/** Refine a sign-change bracket [a, b] to a root via bisection. */
-function bisect(fn, a, b, iter = 40) {
-  let fa = fn(a);
-  let fb = fn(b);
-  if (!Number.isFinite(fa) || !Number.isFinite(fb) || fa * fb > 0) return null;
-  for (let i = 0; i < iter; i++) {
-    const m = (a + b) / 2;
-    const fm = fn(m);
-    if (!Number.isFinite(fm)) return null;
-    if (Math.abs(fm) < 1e-12 || b - a < 1e-12) return m;
-    if (fa * fm < 0) {
-      b = m;
-      fb = fm;
-    } else {
-      a = m;
-      fa = fm;
-    }
-  }
-  return (a + b) / 2;
-}
-
-/**
- * Sample each visible plot across the current x-range, detect sign changes and
- * refine them. Results are cached by a key derived from the view + plots so
- * cursor moves (which re-render) don't recompute.
- */
-function computeAnnotations() {
-  const plots = visiblePlots().filter((p) => p.fn);
-  const key = `${showRoots}|${showIntersections}|${view.centerX}|${view.centerY}|${view.pixelsPerUnit}|${width}|${plots
-    .map((p) => p.expr)
-    .join(';')}`;
-  if (key === annotationKey) return;
-  annotationKey = key;
-  annotations = { roots: [], intersections: [] };
-  if (!showRoots && !showIntersections) return;
-
-  const leftX = toWorldX(0);
-  const rightX = toWorldX(width);
-  const step = (rightX - leftX) / width; // one screen pixel
-
-  if (showRoots) {
-    for (const plot of plots) {
-      let prevY = plot.fn(leftX);
-      for (let x = leftX + step; x <= rightX; x += step) {
-        const y = plot.fn(x);
-        if (Number.isFinite(prevY) && Number.isFinite(y) && prevY * y < 0) {
-          const r = bisect(plot.fn, x - step, x);
-          if (r !== null) annotations.roots.push({ x: r, y: 0, color: plot.color });
-        }
-        prevY = y;
-      }
-    }
-  }
-
-  if (showIntersections) {
-    for (let i = 0; i < plots.length; i += 1) {
-      for (let j = i + 1; j < plots.length; j += 1) {
-        const diff = (x) => plots[i].fn(x) - plots[j].fn(x);
-        let prev = diff(leftX);
-        for (let x = leftX + step; x <= rightX; x += step) {
-          const v = diff(x);
-          if (Number.isFinite(prev) && Number.isFinite(v) && prev * v < 0) {
-            const r = bisect(diff, x - step, x);
-            if (r !== null) {
-              annotations.intersections.push({
-                x: r,
-                y: plots[i].fn(r),
-                colors: [plots[i].color, plots[j].color],
-              });
-            }
-          }
-          prev = v;
-        }
-      }
-    }
-  }
-}
-
-function drawAnnotations() {
-  // Roots: small dots on the x-axis, tinted by the originating curve.
-  for (const r of annotations.roots) {
-    const sx = toScreenX(r.x);
-    const sy = toScreenY(0);
-    ctx.beginPath();
-    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
-    ctx.fillStyle = r.color;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = COLORS.gradientBottom;
-    ctx.stroke();
-  }
-
-  // Intersections: split rings at the crossing point.
-  for (const it of annotations.intersections) {
-    const sx = toScreenX(it.x);
-    const sy = toScreenY(it.y);
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = it.colors[0];
-    ctx.beginPath();
-    ctx.arc(sx, sy, 6, 0, Math.PI);
-    ctx.stroke();
-    ctx.strokeStyle = it.colors[1];
-    ctx.beginPath();
-    ctx.arc(sx, sy, 6, Math.PI, Math.PI * 2);
     ctx.stroke();
   }
 }
@@ -570,7 +431,7 @@ function updateReadout(screenX, screenY) {
   coordLine.textContent = `x: ${formatValue(worldX, decimals)}   y: ${formatValue(worldY, decimals)}`;
   readoutEl.append(coordLine);
 
-  for (const plot of visiblePlots()) {
+  for (const plot of plots) {
     if (!plot.fn) continue;
     const line = document.createElement('div');
     line.style.color = plot.color;
@@ -612,10 +473,10 @@ canvas.addEventListener('mouseleave', () => {
 
 function handleCanvasClick(sx, sy) {
   const worldX = toWorldX(sx);
-  const plots = visiblePlots().filter((p) => p.fn);
+  const candidates = plots.filter((p) => p.fn);
   let best = null;
   let bestDist = 30; // px snap radius
-  for (const plot of plots) {
+  for (const plot of candidates) {
     const y = plot.fn(worldX);
     if (!Number.isFinite(y)) continue;
     const dist = Math.abs(toScreenY(y) - sy);
@@ -661,18 +522,14 @@ window.addEventListener('keydown', (event) => {
 // --- Function panel UI -----------------------------------------------------
 
 const functionsEl = document.getElementById('functions');
-const addGroupButton = document.getElementById('add-group');
+const addFunctionButton = document.getElementById('add-function');
 
-// Plot colors cycle globally across all groups so curves stay distinguishable
-// regardless of which group they live in. `groupCounter` only feeds default
-// names ("Group 1", "Group 2", …).
+// Plot colors cycle globally so curves stay distinct.
 let colorIndex = 0;
-let groupCounter = 0;
-
 const nextColor = () => PLOT_COLORS[colorIndex++ % PLOT_COLORS.length];
 
 function recompile(plot, input) {
-  const { fn, error } = compileExpression(plot.expr, scope);
+  const { fn, error } = compileExpression(plot.expr);
   plot.fn = fn;
   plot.error = error;
   input.classList.toggle('has-error', Boolean(error));
@@ -680,145 +537,10 @@ function recompile(plot, input) {
   render();
 }
 
-/** Recompile every plot (called after params are added/renamed/removed). */
-function recompileAll() {
-  for (const group of groups) {
-    for (const plot of group.plots) {
-      const { fn, error } = compileExpression(plot.expr, scope);
-      plot.fn = fn;
-      plot.error = error;
-      const input = plot.inputEl;
-      if (input) {
-        input.classList.toggle('has-error', Boolean(error));
-        input.title = error ?? '';
-      }
-    }
-  }
-  render();
-}
-
-/** Swap a group's name label for an inline text input until commit/cancel. */
-function startRename(group, nameEl) {
-  const input = document.createElement('input');
-  input.className = 'group-rename';
-  input.value = group.name;
-  input.spellcheck = false;
-
-  const commit = () => {
-    group.name = input.value.trim() || group.name;
-    nameEl.textContent = group.name;
-    input.replaceWith(nameEl);
-    save();
-  };
-
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      commit();
-    } else if (event.key === 'Escape') {
-      input.replaceWith(nameEl);
-    }
-  });
-  input.addEventListener('blur', commit);
-  // A click inside <summary> would otherwise toggle the disclosure.
-  input.addEventListener('click', (event) => event.preventDefault());
-
-  nameEl.replaceWith(input);
-  input.focus();
-  input.select();
-}
-
-function createGroup({ name, collapsed = false, visible = true } = {}) {
-  groupCounter += 1;
-  const group = {
-    name: name ?? `Group ${groupCounter}`,
-    collapsed,
-    visible,
-    plots: [],
-    el: null,
-    rowsEl: null,
-  };
-  groups.push(group);
-
-  const details = document.createElement('details');
-  details.className = 'group';
-  details.open = !collapsed;
-  details.addEventListener('toggle', () => {
-    group.collapsed = !details.open;
-    save();
-  });
-
-  const summary = document.createElement('summary');
-
-  const nameEl = document.createElement('span');
-  nameEl.className = 'group-name';
-  nameEl.textContent = group.name;
-  nameEl.title = 'Double-click to rename';
-  nameEl.addEventListener('dblclick', (event) => {
-    event.preventDefault();
-    startRename(group, nameEl);
-  });
-
-  const visBtn = document.createElement('button');
-  visBtn.type = 'button';
-  visBtn.className = 'group-visibility';
-  visBtn.textContent = '👁';
-  visBtn.title = 'Toggle visibility';
-  const syncVisibility = () => {
-    visBtn.classList.toggle('is-off', !group.visible);
-    details.classList.toggle('group-hidden', !group.visible);
-  };
-  visBtn.addEventListener('click', (event) => {
-    event.preventDefault(); // don't toggle the <details>
-    group.visible = !group.visible;
-    syncVisibility();
-    render();
-    save();
-  });
-  syncVisibility();
-
-  const addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.className = 'group-add';
-  addBtn.textContent = '+';
-  addBtn.title = 'Add function to this group';
-  addBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    details.open = true;
-    addPlot(group, '');
-    save();
-  });
-
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'group-remove';
-  removeBtn.textContent = '×';
-  removeBtn.title = 'Remove group';
-  removeBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    groups.splice(groups.indexOf(group), 1);
-    details.remove();
-    render();
-    save();
-  });
-
-  summary.append(nameEl, visBtn, addBtn, removeBtn);
-
-  const rows = document.createElement('div');
-  rows.className = 'rows';
-
-  details.append(summary, rows);
-  functionsEl.append(details);
-
-  group.el = details;
-  group.rowsEl = rows;
-  return group;
-}
-
-function addPlot(group, initialExpr, presetColor) {
+function addPlot(initialExpr, presetColor) {
   const color = presetColor ?? nextColor();
   const plot = { expr: initialExpr ?? '', color, fn: null, error: null };
-  group.plots.push(plot);
+  plots.push(plot);
 
   const row = document.createElement('div');
   row.className = 'function-row';
@@ -844,209 +566,30 @@ function addPlot(group, initialExpr, presetColor) {
   removeButton.type = 'button';
   removeButton.textContent = '×';
   removeButton.addEventListener('click', () => {
-    group.plots.splice(group.plots.indexOf(plot), 1);
+    plots.splice(plots.indexOf(plot), 1);
     row.remove();
     render();
     save();
   });
 
   row.append(swatch, input, removeButton);
-  group.rowsEl.append(row);
+  functionsEl.append(row);
 
   if (plot.expr) recompile(plot, input);
 }
 
-addGroupButton.addEventListener('click', () => {
-  const group = createGroup();
-  addPlot(group, '');
-  save();
-});
-
-// --- Parameters UI ---------------------------------------------------------
-
-const paramsEl = document.getElementById('params');
-const addParamButton = document.getElementById('add-param');
-
-/** Pick the next unused single-letter parameter name (a-z). */
-function defaultParamName() {
-  const used = new Set(params.map((p) => p.name));
-  for (let i = 0; i < 26; i += 1) {
-    const name = String.fromCharCode(97 + i); // 'a' … 'z'
-    if (!used.has(name)) return name;
-  }
-  // Fall back to p1, p2, …
-  let n = 1;
-  while (used.has(`p${n}`)) n += 1;
-  return `p${n}`;
-}
-
-/** Clamp a value to [min, max], snapping to the nearest step multiple. */
-function clampParamValue(param) {
-  let { value, min, max, step } = param;
-  if (min <= max) value = Math.min(Math.max(value, min), max);
-  if (step > 0) value = Math.round((value - min) / step) * step + min;
-  param.value = value;
-}
-
-function updateParamReadout(param) {
-  param.valueEl.textContent = Number(param.value.toFixed(4)).toString();
-}
-
-function applyParamValue(param, raw) {
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return; // ignore invalid input
-  param.value = value;
-  clampParamValue(param);
-  scope[param.name] = param.value; // live — no recompile needed
-  param.slider.value = String(param.value);
-  updateParamReadout(param);
-  render();
-}
-
-function addParam({ name, value, min, max, step } = {}) {
-  const param = {
-    name: name ?? defaultParamName(),
-    value: value ?? 1,
-    min: min ?? -10,
-    max: max ?? 10,
-    step: step ?? 0.1,
-  };
-  clampParamValue(param);
-  params.push(param);
-  scope[param.name] = param.value;
-
-  const el = document.createElement('div');
-  el.className = 'param';
-
-  const top = document.createElement('div');
-  top.className = 'param-top';
-
-  const nameInput = document.createElement('input');
-  nameInput.className = 'param-name';
-  nameInput.type = 'text';
-  nameInput.value = param.name;
-  nameInput.spellcheck = false;
-  nameInput.maxLength = 12;
-  nameInput.title = 'Parameter name';
-  const commitName = () => {
-    const trimmed = nameInput.value.trim();
-    nameInput.value = param.name;
-    if (!trimmed || trimmed === param.name) return;
-    if (params.some((p) => p.name === trimmed)) {
-      nameInput.classList.add('has-error');
-      nameInput.title = 'Name already in use';
-      return;
-    }
-    nameInput.classList.remove('has-error');
-    nameInput.title = 'Parameter name';
-    delete scope[param.name];
-    param.name = trimmed;
-    scope[param.name] = param.value;
-    recompileAll(); // closures baked in the old name
-    save();
-  };
-  nameInput.addEventListener('change', commitName);
-  nameInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') nameInput.blur();
-  });
-
-  const valueEl = document.createElement('span');
-  valueEl.className = 'param-value';
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = String(param.min);
-  slider.max = String(param.max);
-  slider.step = String(param.step);
-  slider.value = String(param.value);
-  slider.addEventListener('input', () => {
-    applyParamValue(param, slider.value);
-    save();
-  });
-
-  const removeBtn = document.createElement('button');
-  removeBtn.className = 'remove';
-  removeBtn.type = 'button';
-  removeBtn.textContent = '×';
-  removeBtn.title = 'Remove parameter';
-  removeBtn.addEventListener('click', () => {
-    params.splice(params.indexOf(param), 1);
-    delete scope[param.name];
-    el.remove();
-    recompileAll();
-    save();
-  });
-
-  const advanced = document.createElement('div');
-  advanced.className = 'param-advanced';
-  const mkField = (labelText, key) => {
-    const label = document.createElement('label');
-    label.textContent = labelText;
-    const field = document.createElement('input');
-    field.type = 'number';
-    field.value = String(param[key]);
-    field.step = 'any';
-    field.addEventListener('change', () => {
-      const v = Number(field.value);
-      if (!Number.isFinite(v)) {
-        field.value = String(param[key]);
-        return;
-      }
-      param[key] = v;
-      clampParamValue(param);
-      scope[param.name] = param.value;
-      slider.min = String(param.min);
-      slider.max = String(param.max);
-      slider.step = String(param.step);
-      slider.value = String(param.value);
-      updateParamReadout(param);
-      render();
-      save();
-    });
-    label.append(field);
-    return label;
-  };
-  advanced.append(mkField('min', 'min'), mkField('max', 'max'), mkField('step', 'step'));
-
-  top.append(nameInput, valueEl, removeBtn);
-  el.append(top, slider, advanced);
-  paramsEl.append(el);
-
-  param.el = el;
-  param.valueEl = valueEl;
-  param.slider = slider;
-
-  updateParamReadout(param);
-  return param;
-}
-
-addParamButton.addEventListener('click', () => {
-  addParam();
-  recompileAll();
+addFunctionButton.addEventListener('click', () => {
+  addPlot('');
   save();
 });
 
 // --- Persistence -----------------------------------------------------------
 
-const STORAGE_KEY = 'graphunc.groups';
+const STORAGE_KEY = 'graphunc.plots';
 
 /** Minimal serializable shape; functions are recompiled from `expr` on load. */
 function serialize() {
-  return {
-    params: params.map((p) => ({
-      name: p.name,
-      value: p.value,
-      min: p.min,
-      max: p.max,
-      step: p.step,
-    })),
-    groups: groups.map((g) => ({
-      name: g.name,
-      collapsed: g.collapsed,
-      visible: g.visible,
-      plots: g.plots.map((p) => ({ expr: p.expr, color: p.color })),
-    })),
-  };
+  return plots.map((p) => ({ expr: p.expr, color: p.color }));
 }
 
 function save() {
@@ -1060,10 +603,7 @@ function save() {
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!parsed) return null;
-    // Backward compat: the legacy format was a bare array of groups.
-    if (Array.isArray(parsed)) return { params: [], groups: parsed };
-    return parsed;
+    return Array.isArray(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -1075,13 +615,7 @@ function loadState() {
 function serializeState() {
   return {
     v: [view.centerX, view.centerY, view.pixelsPerUnit],
-    p: params.map((p) => [p.name, p.value, p.min, p.max, p.step]),
-    g: groups.map((g) => [
-      g.name,
-      g.collapsed,
-      g.visible,
-      g.plots.map((p) => [p.expr, p.color]),
-    ]),
+    p: plots.map((p) => [p.expr, p.color]),
   };
 }
 
@@ -1125,25 +659,8 @@ function loadFromHash() {
 }
 
 function applyState(state) {
-  // Restore parameters first so plots compile against a populated scope.
-  for (const p of state.p ?? []) {
-    addParam({
-      name: p[0],
-      value: p[1],
-      min: p[2],
-      max: p[3],
-      step: p[4],
-    });
-  }
-  for (const g of state.g ?? []) {
-    const group = createGroup({
-      name: g[0],
-      collapsed: Boolean(g[1]),
-      visible: g[2] !== false,
-    });
-    for (const plot of g[3] ?? []) {
-      addPlot(group, plot[0], plot[1]);
-    }
+  for (const plot of state.p ?? []) {
+    addPlot(plot[0], plot[1]);
   }
   if (Array.isArray(state.v)) {
     view.centerX = state.v[0];
@@ -1193,58 +710,6 @@ document.getElementById('reset-view').addEventListener('click', () => {
   render();
 });
 
-document.getElementById('fit-view').addEventListener('click', () => {
-  const plots = visiblePlots().filter((p) => p.fn);
-  if (!plots.length) {
-    view.centerX = 0;
-    view.centerY = 0;
-    view.pixelsPerUnit = 60;
-    render();
-    return;
-  }
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const plot of plots) {
-    for (let x = -50; x <= 50; x += 0.2) {
-      const y = plot.fn(x);
-      if (!Number.isFinite(y)) continue;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-  }
-  if (!Number.isFinite(minX)) return;
-  const padX = (maxX - minX) * 0.1 || 1;
-  const padY = (maxY - minY) * 0.1 || 1;
-  const w = maxX - minX + 2 * padX;
-  const h = maxY - minY + 2 * padY;
-  view.centerX = (minX + maxX) / 2;
-  view.centerY = (minY + maxY) / 2;
-  view.pixelsPerUnit = Math.min(
-    Math.max(Math.min(width / w, height / h), 5),
-    100000
-  );
-  render();
-});
-
-const toggleRootsBtn = document.getElementById('toggle-roots');
-const toggleIntersectBtn = document.getElementById('toggle-intersect');
-
-toggleRootsBtn.addEventListener('click', () => {
-  showRoots = !showRoots;
-  toggleRootsBtn.setAttribute('aria-pressed', String(showRoots));
-  render();
-});
-
-toggleIntersectBtn.addEventListener('click', () => {
-  showIntersections = !showIntersections;
-  toggleIntersectBtn.setAttribute('aria-pressed', String(showIntersections));
-  render();
-});
-
 // --- Help overlay ----------------------------------------------------------
 
 const helpOverlay = document.getElementById('help-overlay');
@@ -1270,27 +735,13 @@ resize();
 // the hash is cleared so the URL bar stays clean while working.
 const hashState = loadFromHash();
 const restored = hashState ?? loadState();
-if (restored) {
-  if (hashState) {
-    applyState(restored);
-  } else {
-    for (const p of restored.params ?? []) addParam(p);
-    for (const g of restored.groups ?? []) {
-      const group = createGroup({
-        name: g.name,
-        collapsed: Boolean(g.collapsed),
-        visible: g.visible !== false,
-      });
-      for (const p of g.plots ?? []) {
-        addPlot(group, p.expr, p.color);
-      }
-    }
-  }
-  // Resume color cycling past the restored curves so new ones stay distinct.
-  colorIndex = groups.reduce((n, g) => n + g.plots.length, 0);
-  if (hashState) history.replaceState(null, '', location.pathname + location.search);
+if (hashState) {
+  applyState(restored);
+  history.replaceState(null, '', location.pathname + location.search);
+} else if (restored) {
+  for (const p of restored) addPlot(p.expr, p.color);
 } else {
-  addPlot(createGroup({ name: 'Group 1' }), 'sin(x)');
+  addPlot('sin(x)');
 }
 
 render();

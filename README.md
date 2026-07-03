@@ -19,17 +19,13 @@ python3 -m http.server
 
 - Full-screen cartesian grid with adaptive tick spacing (1/2/5 × 10ⁿ)
 - Pan (drag) and zoom (scroll, anchored under the cursor)
-- Plot multiple functions at once, organized into named, collapsible groups
-- **Parameters** — workspace-global named constants with sliders; curves
-  re-render live as you drag, no recompile needed
+- Plot multiple functions at once in a flat list
 - Live cursor readout: world coordinates plus each function's value, with a marker dot on every curve
 - **Trace mode** — click a curve to select it, then walk along it with the
   arrow keys (←/→ step, ↑/↓ jump to local extrema); Esc exits
-- **Roots & intersections** — toggle on-demand annotation; roots are marked
-  on the axis, intersections as split rings
-- **Share** — "Copy link" encodes the full view, parameters and functions into
-  the URL hash; "PNG" exports the canvas at full Retina resolution
-- "Reset" and "Fit" view buttons
+- **Share** — "Copy link" encodes the full view and functions into the URL
+  hash; "PNG" exports the canvas at full Retina resolution
+- "Reset" view button
 - Safe expression parser — recursive descent, **no `eval`** — so user input never executes arbitrary code
 - HiDPI/Retina-crisp rendering, with render coalescing via `requestAnimationFrame`
 - State persists to `localStorage` between sessions
@@ -42,19 +38,19 @@ python3 -m http.server
   Note: `1/2x` parses left-to-right as `(1/2)*x`; write `1/(2x)` otherwise.
 - Comparisons: `< <= > >= == !=` (return `1`/`0`)
 - Ternary: `cond ? a : b` (enables piecewise functions)
-- Variable: `x` · Parameters: any name you add via the Parameters panel
+- Variable: `x`
 - Constants: `pi`, `e`, `tau`
 - Functions (1-arg): `sin cos tan asin acos atan sinh cosh tanh sqrt cbrt abs exp ln log log2 floor ceil round sign`
 - Functions (multi-arg): `atan2(y,x) mod(a,b) min(a,b) max(a,b) hypot(x,y) nthroot(x,n) log(base,x)`
 
-Examples: `sin(x) * x`, `x^2`, `1/x`, `a*sin(b*x)`,
+Examples: `sin(x) * x`, `x^2`, `1/x`,
 `x < 0 ? -x : x`, `log(2, 8)`
 
 ## Project structure
 
 ```
-index.html    # Markup: canvas, readout, panel (parameters, functions, toolbar)
+index.html    # Markup: canvas, readout, panel (functions, toolbar)
 styles.css    # Layout and panel styling
 parser.js     # Safe expression compiler (compileExpression)
-main.js       # Coordinate transforms, rendering, pan/zoom, params, trace, UI
+main.js       # Coordinate transforms, rendering, pan/zoom, trace, UI
 ```

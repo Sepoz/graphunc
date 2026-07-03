@@ -113,58 +113,11 @@ describe('coordDecimals', () => {
   });
 });
 
-describe('bisect', () => {
-  it('finds root of a linear function', () => {
-    // f(x) = 2x - 4 has root at x = 2
-    const eps = 1e-10;
-    const root = m.bisect((x) => 2 * x - 4, 0, 5);
-    assert.notEqual(root, null);
-    assert.ok(Math.abs(root - 2) < eps);
-  });
-
-  it('finds root of x^2 - 4', () => {
-    const root = m.bisect((x) => x * x - 4, 0, 5);
-    assert.notEqual(root, null);
-    assert.ok(Math.abs(root - 2) < 1e-10);
-  });
-
-  it('returns null if no sign change', () => {
-    const root = m.bisect((x) => x * x + 1, -5, 5);
-    assert.equal(root, null);
-  });
-
-  it('returns null if fa or fb are not finite', () => {
-    const root = m.bisect((x) => 1 / x, -1, 1);
-    assert.equal(root, null);
-  });
-
-  it('finds root when one endpoint has f=0', () => {
-    const root = m.bisect((x) => x - 5, 0, 5);
-    // f(5) = 0, fb = 0, fa * fb = -5 * 0 = 0 → not > 0
-    assert.notEqual(root, null);
-    assert.ok(Math.abs(root - 5) < 1e-10);
-  });
-
-  it('stops when fm is very close to zero', () => {
-    // f(x) = x - 1e-13 → root at 1e-13; should converge quickly
-    const root = m.bisect((x) => x - 1e-13, -1, 1);
-    assert.notEqual(root, null);
-    assert.ok(Math.abs(root - 1e-13) < 1e-12);
-  });
-
-  it('works for a sine crossing', () => {
-    const root = m.bisect(Math.sin, 3, 4); // sin crosses at π ≈ 3.14159
-    assert.notEqual(root, null);
-    assert.ok(Math.abs(root - Math.PI) < 1e-6);
-  });
-});
-
 describe('serializeState', () => {
-  it('returns an object with v, p, g keys', () => {
+  it('returns an object with v, p keys', () => {
     const state = m.serializeState();
     assert.ok('v' in state);
     assert.ok('p' in state);
-    assert.ok('g' in state);
   });
 });
 
@@ -177,7 +130,7 @@ describe('encodeState / decodeState', () => {
   });
 
   it('round-trips with data', () => {
-    const obj = { v: [1, 2, 100], p: [['a', 5, -10, 10, 1]], g: [['G1', false, true, [['sin(x)', '#ff0000']]]] };
+    const obj = { v: [1, 2, 100], p: [['sin(x)', '#ff0000']] };
     const encoded = m.encodeState(obj);
     const decoded = m.decodeState(encoded);
     assert.deepEqual(decoded, obj);
@@ -199,7 +152,7 @@ describe('encodeState / decodeState', () => {
   });
 
   it('handles special characters in expressions', () => {
-    const obj = { g: [['Group 1', false, true, [['a < b ? c : d', '#4dd0e1']]]] };
+    const obj = { g: [['a < b ? c : d', '#4dd0e1']] };
     const encoded = m.encodeState(obj);
     const decoded = m.decodeState(encoded);
     assert.deepEqual(decoded, obj);

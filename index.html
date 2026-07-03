@@ -19,15 +19,8 @@
         <span class="panel-title">Graphunc</span>
         <button id="help-btn" type="button" title="Help">?</button>
       </div>
-      <div id="params-section">
-        <div class="section-header">
-          <span class="section-title">Parameters</span>
-          <button id="add-param" type="button" title="Add a parameter">+</button>
-        </div>
-        <div id="params"></div>
-      </div>
       <div id="functions"></div>
-      <button id="add-group" type="button">+ Add group</button>
+      <button id="add-function" type="button">+ Add function</button>
       <p class="hint">
         Drag to pan · scroll to zoom · e.g. <code>sin(x) * x</code>,
         <code>x^2</code>, <code>1/x</code>
@@ -36,11 +29,6 @@
         <button id="copy-link" type="button">Copy link</button>
         <button id="export-png" type="button">PNG</button>
         <button id="reset-view" type="button">Reset</button>
-        <button id="fit-view" type="button">Fit</button>
-      </div>
-      <div class="toolbar">
-        <button id="toggle-roots" type="button" aria-pressed="false">Roots</button>
-        <button id="toggle-intersect" type="button" aria-pressed="false">Intersect</button>
       </div>
     </div>
 
@@ -74,10 +62,9 @@
             <tr><td class="mono">nthroot(x,n) log(base,val)</td><td></td></tr>
           </table>
 
-          <h4>Constants &amp; parameters</h4>
+          <h4>Constants</h4>
           <table>
             <tr><td class="mono">pi e tau</td><td>built-in constants</td></tr>
-            <tr><td class="mono">a * sin(x)</td><td>add <strong>a</strong> as a parameter, drag the slider</td></tr>
           </table>
 
           <h4>Controls</h4>
@@ -85,10 +72,9 @@
             <tr><td>Drag</td><td>pan the view</td></tr>
             <tr><td>Scroll</td><td>zoom (anchored under cursor)</td></tr>
             <tr><td>Click a curve</td><td>trace — ←/→ step, ↑/↓ extremum, Esc exit</td></tr>
-            <tr><td>Roots / Intersect</td><td>toggle annotations on current view</td></tr>
             <tr><td>Copy link</td><td>share the full workspace via URL</td></tr>
             <tr><td>PNG</td><td>export canvas at Retina resolution</td></tr>
-            <tr><td>Reset / Fit</td><td>reset view or zoom to fit all curves</td></tr>
+            <tr><td>Reset</td><td>reset view</td></tr>
           </table>
         </div>
       </div>

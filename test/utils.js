@@ -22,6 +22,7 @@ const _mainExports = (() => {
       font: '', textAlign: 'left', textBaseline: 'alphabetic',
       beginPath: noop, moveTo: noop, lineTo: noop, stroke: noop,
       fill: noop, arc: noop, fillRect: noop, fillText: noop,
+      createLinearGradient: () => ({ addColorStop: noop }),
     };
     stubs.canvas = {
       getContext: () => ctxStub,
@@ -42,10 +43,9 @@ const _mainExports = (() => {
       getElementById(id) {
         if (id === 'graph') return stubs.canvas;
         if (id === 'readout') return stubs.readoutEl;
-        if (id === 'functions' || id === 'params' || id === 'add-group' ||
-            id === 'add-param' || id === 'copy-link' || id === 'export-png' ||
-            id === 'reset-view' || id === 'fit-view' || id === 'toggle-roots' ||
-            id === 'toggle-intersect') {
+        if (id === 'functions' || id === 'add-function' || id === 'copy-link' ||
+            id === 'export-png' || id === 'reset-view' || id === 'help-overlay' ||
+            id === 'help-btn' || id === 'help-close') {
           return { addEventListener: noop, textContent: '', classList: { add: noop, remove: noop, toggle: noop }, setAttribute: noop, style: {}, append: noop, replaceChildren: noop, hidden: false, offsetWidth: 0, offsetHeight: 0, value: '', spellcheck: false, maxLength: 0, placeholder: '', type: '', title: '', focus: noop, select: noop, checked: false };
         }
         return null;
@@ -85,7 +85,7 @@ const _mainExports = (() => {
     ].join('\n');
     const keys = ['document', 'window', 'navigator', 'localStorage', 'location', 'canvas'];
     const vals = keys.map((k) => stubs[k]);
-    const fn = new Function(...keys, preamble + '\n' + combined + '\nreturn { compileExpression, bisect, niceStep, formatTick, formatValue, coordDecimals, serializeState, encodeState, decodeState, toUrlBase64, fromUrlBase64, groups, params, scope, visiblePlots, view };');
+    const fn = new Function(...keys, preamble + '\n' + combined + '\nreturn { compileExpression, niceStep, formatTick, formatValue, coordDecimals, serializeState, encodeState, decodeState, toUrlBase64, fromUrlBase64, plots, view };');
     return fn(...vals);
   } catch (e) {
     // Return a proxy that throws on any property access, so tests get a clear error.
