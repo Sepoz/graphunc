@@ -23,6 +23,7 @@ const _mainExports = (() => {
       beginPath: noop, moveTo: noop, lineTo: noop, stroke: noop,
       fill: noop, arc: noop, fillRect: noop, fillText: noop,
       createLinearGradient: () => ({ addColorStop: noop }),
+      createRadialGradient: () => ({ addColorStop: noop }),
     };
     stubs.canvas = {
       getContext: () => ctxStub,

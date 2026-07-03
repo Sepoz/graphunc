@@ -15,15 +15,17 @@ const ctx = canvas.getContext('2d');
 
 const COLORS = {
   background: '#e8f4fb',
-  gradientTop: '#cfe8f5',
-  gradientBottom: '#f0faff',
-  grid: '#c4e0f0',
-  axis: '#5b9bd5',
-  label: '#6b8fb5',
+  gradientTop: '#8fd3f4', // vivid sky blue
+  gradientMid: '#b3e5fc', // aqua
+  gradientBottom: '#e8f8ff', // near-white
+  sunGlow: 'rgba(255, 255, 230, 0.4)', // soft warm "sun" radial
+  grid: '#a8dde8', // teal-tinted grid
+  axis: '#4fc3f7', // bright aqua
+  label: '#4a8fb5',
 };
 
-// Palette cycled through as the user adds functions.
-const PLOT_COLORS = ['#1ba0e2', '#7cb342', '#ff9800', '#e91e63', '#8e24aa'];
+// Palette cycled through as the user adds functions — saturated, nature-toned.
+const PLOT_COLORS = ['#00b0ff', '#4caf50', '#ffa726', '#ef5350', '#8e44ad'];
 
 const view = {
   centerX: 0,
@@ -181,8 +183,20 @@ function plotFunction(fn, color) {
 function doRender() {
   const grad = ctx.createLinearGradient(0, 0, 0, height);
   grad.addColorStop(0, COLORS.gradientTop);
+  grad.addColorStop(0.5, COLORS.gradientMid);
   grad.addColorStop(1, COLORS.gradientBottom);
   ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Soft radial "sun" glow near the top center — a Frutiger Aero hallmark.
+  const sunR = Math.max(width, height) * 0.6;
+  const sun = ctx.createRadialGradient(
+    width * 0.3, -height * 0.1, 0,
+    width * 0.3, -height * 0.1, sunR
+  );
+  sun.addColorStop(0, COLORS.sunGlow);
+  sun.addColorStop(1, 'rgba(255,255,230,0)');
+  ctx.fillStyle = sun;
   ctx.fillRect(0, 0, width, height);
 
   const step = niceStep(70);

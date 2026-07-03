@@ -9,13 +9,68 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: linear-gradient(180deg, #cfe8f5 0%, #e8f4fb 50%, #f0faff 100%);
-  font-family: 'Nunito', system-ui, sans-serif;
+  background: linear-gradient(180deg, #8fd3f4 0%, #b3e5fc 45%, #e8f8ff 100%);
+  font-family: 'Comfortaa', system-ui, sans-serif;
 }
+
+/* --- Floating bokeh bubbles (Frutiger Aero backdrop) --------------------- */
+
+#bokeh {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.05) 60%,
+    transparent 70%
+  );
+  box-shadow:
+    inset 0 0 20px rgba(255, 255, 255, 0.3),
+    inset -4px -8px 16px rgba(100, 180, 220, 0.12);
+  animation: float-up linear infinite;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(110vh) scale(0.7);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) scale(1);
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-15vh) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.b1 { left: 5%; width: 120px; height: 120px; animation-duration: 28s; }
+.b2 { left: 22%; width: 70px; height: 70px; animation-duration: 22s; animation-delay: 4s; }
+.b3 { left: 48%; width: 180px; height: 180px; animation-duration: 36s; animation-delay: 8s; }
+.b4 { left: 68%; width: 90px; height: 90px; animation-duration: 26s; animation-delay: 2s; }
+.b5 { left: 82%; width: 140px; height: 140px; animation-duration: 32s; animation-delay: 12s; }
+.b6 { left: 92%; width: 55px; height: 55px; animation-duration: 20s; animation-delay: 6s; }
 
 /* The canvas fills the whole viewport. `display: block` removes the
    inline-element whitespace that would otherwise add a scrollbar. */
 #graph {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100vw;
   height: 100vh;
@@ -31,9 +86,9 @@ body {
   position: fixed;
   z-index: 10;
   padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   color: #1a4a6b;
   font-family: ui-monospace, monospace;
   font-size: 12px;
@@ -41,26 +96,76 @@ body {
   pointer-events: none;
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
-  box-shadow: 0 4px 16px rgba(27, 160, 226, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 4px 16px rgba(27, 100, 160, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* Floating control panel. */
+/* --- Floating control panel (Aero glass) ---------------------------------- */
+/* The ::before adds the signature Vista "gloss" sheen across the top. */
+/* The ::after adds scattered water droplets — condensation on glass. */
+
 #panel {
   position: fixed;
   top: 16px;
   left: 16px;
   width: 280px;
   padding: 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  background: rgba(200, 235, 250, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   color: #1a4a6b;
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(2);
+  backdrop-filter: blur(28px) saturate(2);
   box-shadow:
-    0 8px 32px rgba(27, 100, 160, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 40px rgba(27, 100, 160, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  z-index: 5;
+}
+
+#panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Water droplets — small translucent beads with a bright reflection dot. */
+#panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 92% 8%, rgba(255,255,255,0.6) 0.5px, rgba(255,255,255,0.15) 2px, transparent 4px),
+    radial-gradient(circle at 97% 14%, rgba(255,255,255,0.5) 0.4px, rgba(255,255,255,0.12) 1.5px, transparent 3px),
+    radial-gradient(circle at 88% 22%, rgba(255,255,255,0.45) 0.5px, rgba(255,255,255,0.1) 2.5px, transparent 5px),
+    radial-gradient(circle at 94% 30%, rgba(255,255,255,0.4) 0.4px, rgba(255,255,255,0.1) 1.5px, transparent 3px),
+    radial-gradient(circle at 85% 5%, rgba(255,255,255,0.35) 0.3px, rgba(255,255,255,0.08) 1.5px, transparent 3px);
+}
+
+/* All panel children stack above the ::before / ::after layers. */
+#panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Panel header with the title and help button. */
@@ -71,35 +176,57 @@ body {
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent);
   border-radius: 4px;
 }
 
 .panel-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #143a55;
+  font-family: 'Comfortaa', system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0d3a5c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+/* --- Glossy aqua buttons (the "jelly" look) ------------------------------- */
+
 #help-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.25);
-  color: #5b8fb5;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.85) 45%,
+    rgba(170, 220, 245, 0.6) 55%,
+    rgba(120, 190, 230, 0.5) 100%
+  );
+  color: #2a7aad;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 700;
   line-height: 1;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(27, 100, 160, 0.15);
+  transition: all 0.15s ease;
 }
 
 #help-btn:hover {
-  border-color: rgba(27, 160, 226, 0.6);
-  color: #1ba0e2;
-  background: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 40%,
+    rgba(27, 160, 226, 0.5) 60%,
+    rgba(27, 140, 200, 0.6) 100%
+  );
+  color: #0d5a8a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 6px rgba(27, 100, 160, 0.25);
 }
 
 #functions {
@@ -118,29 +245,35 @@ body {
 .function-row .swatch {
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: 50%;
   flex-shrink: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .function-row input {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.4);
   color: #1a4a6b;
   font-family: ui-monospace, monospace;
   font-size: 13px;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .function-row input:focus {
   outline: none;
-  border-color: rgba(27, 160, 226, 0.5);
+  border-color: rgba(27, 160, 226, 0.6);
   background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(27, 160, 226, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 3px rgba(27, 160, 226, 0.15);
 }
 
 .function-row input.has-error {
@@ -155,43 +288,62 @@ body {
   font-size: 16px;
   line-height: 1;
   padding: 2px 4px;
+  transition: color 0.15s ease;
 }
 
 .function-row .remove:hover {
   color: #ff5252;
 }
 
-/* A button to append a new function row. */
+/* Glossy capsule "add function" button. */
 #add-function {
   width: 100%;
-  padding: 7px;
-  border-radius: 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.2);
-  color: #5b8fb5;
+  padding: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.75) 42%,
+    rgba(180, 225, 245, 0.5) 58%,
+    rgba(140, 200, 235, 0.45) 100%
+  );
+  color: #2a7aad;
   cursor: pointer;
   font-size: 13px;
+  font-weight: 600;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 4px rgba(27, 100, 160, 0.12);
+  transition: all 0.15s ease;
 }
 
 #add-function:hover {
-  border-color: rgba(27, 160, 226, 0.6);
-  color: #1ba0e2;
-  background: rgba(255, 255, 255, 0.35);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.9) 38%,
+    rgba(27, 160, 226, 0.45) 62%,
+    rgba(27, 140, 200, 0.55) 100%
+  );
+  color: #0d5a8a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 8px rgba(27, 100, 160, 0.2);
 }
 
 .hint {
   margin-top: 10px;
   font-size: 11px;
   line-height: 1.5;
-  color: #7aa0c0;
+  color: #5b8fb5;
 }
 
 .hint code {
   font-family: ui-monospace, monospace;
-  color: #9bc0dc;
+  color: #2a7aad;
 }
 
 .toolbar {
@@ -200,42 +352,69 @@ body {
   margin-top: 10px;
 }
 
+/* Glossy aqua jelly toolbar buttons. */
 .toolbar button {
   flex: 1;
-  padding: 5px 4px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.25);
-  color: #5b8fb5;
+  padding: 6px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.7) 42%,
+    rgba(180, 225, 245, 0.45) 58%,
+    rgba(140, 200, 235, 0.4) 100%
+  );
+  color: #2a7aad;
   cursor: pointer;
   font-size: 11px;
+  font-weight: 600;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(27, 100, 160, 0.1);
+  transition: all 0.15s ease;
 }
 
 .toolbar button:hover {
-  border-color: rgba(27, 160, 226, 0.6);
-  color: #1ba0e2;
-  background: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.9) 38%,
+    rgba(27, 160, 226, 0.4) 62%,
+    rgba(27, 140, 200, 0.5) 100%
+  );
+  color: #0d5a8a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 6px rgba(27, 100, 160, 0.2);
 }
 
 .toolbar button.copied {
-  border-color: #66bb6a;
-  color: #66bb6a;
+  border-color: rgba(102, 187, 106, 0.7);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.9) 38%,
+    rgba(102, 187, 106, 0.45) 62%,
+    rgba(85, 170, 90, 0.5) 100%
+  );
+  color: #2e7d32;
 }
 
-/* Help overlay */
+/* --- Help overlay --------------------------------------------------------- */
+
 #help-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(80, 140, 190, 0.2);
+  background: rgba(80, 140, 190, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 #help-overlay[hidden] {
@@ -246,17 +425,17 @@ body {
   width: 500px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  background: rgba(200, 235, 250, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(2);
+  backdrop-filter: blur(28px) saturate(2);
   box-shadow:
-    0 8px 32px rgba(27, 100, 160, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 40px rgba(27, 100, 160, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
@@ -265,27 +444,49 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #143a55;
+  font-family: 'Comfortaa', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d3a5c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 #help-close {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #7aa0c0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.8) 42%,
+    rgba(255, 150, 150, 0.4) 58%,
+    rgba(230, 100, 100, 0.45) 100%
+  );
+  color: #c0392b;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(27, 100, 160, 0.1);
+  transition: all 0.15s ease;
 }
 
 #help-close:hover {
-  color: #ff5252;
-  background: rgba(255, 82, 82, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 38%,
+    rgba(255, 82, 82, 0.5) 62%,
+    rgba(230, 60, 60, 0.6) 100%
+  );
+  color: #a93226;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 6px rgba(200, 50, 50, 0.2);
 }
 
 .help-scroll {
@@ -298,7 +499,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #6b8fb5;
+  color: #4a8fb5;
   margin: 14px 0 8px;
 }
 
@@ -327,7 +528,7 @@ body {
   font-family: ui-monospace, monospace;
   font-size: 12px;
   background: rgba(27, 160, 226, 0.1);
-  color: #1ba0e2;
+  color: #0080b8;
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -335,5 +536,5 @@ body {
 .help-scroll .mono {
   font-family: ui-monospace, monospace;
   font-size: 12px;
-  color: #1ba0e2;
+  color: #0080b8;
 }
