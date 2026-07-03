@@ -81,7 +81,18 @@ const COMPARATORS = {
 };
 
 /** Split the raw string into tokens: numbers, identifiers, operators, parens. */
-function tokenize(input) {
+function tokenize(raw) {
+  const input = raw
+    .replace(/\u02C6/g, '^')   // modifier letter circumflex -> ^
+    .replace(/\u02C7/g, '^')   // caron -> ^
+    .replace(/\u02D8/g, '^')   // breve -> ^
+    .replace(/\u02DC/g, '^')   // small tilde -> ~
+    .replace(/\u00D7/g, '*')   // multiplication sign -> *
+    .replace(/\u00F7/g, '/')   // division sign -> /
+    .replace(/\u2212/g, '-')   // minus sign -> -
+    .replace(/\u2260/g, '!=')  // not equal
+    .replace(/\u2264/g, '<=')  // less than or equal
+    .replace(/\u2265/g, '>='); // greater than or equal
   const tokens = [];
   let i = 0;
 

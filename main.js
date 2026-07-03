@@ -24,8 +24,8 @@ const COLORS = {
   label: '#4a8fb5',
 };
 
-// Palette cycled through as the user adds functions — saturated, nature-toned.
-const PLOT_COLORS = ['#00b0ff', '#4caf50', '#ffa726', '#ef5350', '#8e44ad'];
+// Palette cycled through as the user adds functions — Frutiger Aero tones.
+const PLOT_COLORS = ['#00bfff', '#6fbf4c', '#ffb347', '#ff6b8a', '#77aaff', '#00e5a0', '#ffcc4d', '#b388ff', '#ff8a65', '#26c6da'];
 
 const view = {
   centerX: 0,
